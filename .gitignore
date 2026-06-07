@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+runs/
+outputs/
+lerobot_home/
+hf_cache/
+openpi_cache/
+uv_cache/
+openpi/
+external/
+checkpoints/
+assets/

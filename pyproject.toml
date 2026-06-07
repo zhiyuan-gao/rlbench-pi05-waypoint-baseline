@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rlbench-pi05-waypoint"
+version = "0.1.0"
+description = "OpenPI/pi0.5 full-task sparse-waypoint baseline data tools for RLBench selected10"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = [
+  "numpy",
+  "pillow",
+  "tqdm",
+  "tyro",
+]
+
+[project.scripts]
+rlbench-pi05-convert = "rlbench_pi05_waypoint.convert_to_lerobot:main"
+rlbench-pi05-smoke-data = "rlbench_pi05_waypoint.smoke_lerobot_dataset:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+

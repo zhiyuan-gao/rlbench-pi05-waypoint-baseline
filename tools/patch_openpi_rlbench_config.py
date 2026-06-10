@@ -61,8 +61,8 @@ TRAIN_CONFIG_ENTRY = r'''
         ema_decay=0.999,
         weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
         num_train_steps=20_000,
-        save_interval=5_000,
-        keep_period=5_000,
+        save_interval=2_000,
+        keep_period=2_000,
         fsdp_devices=8,
     ),
 '''

@@ -92,7 +92,7 @@ num_train_steps   = 20000     # first-stage run
 max_train_steps   = 60000     # only if validation keeps improving
 warmup_steps      = 10000
 learning_rate     = 5e-5
-save_interval     = 5000
+save_interval     = 2000
 ```
 
 `batch_size=128, num_train_steps=20000` 是当前主设置。它比总超参文件里的 batch 256 full recipe 更保守，适合作为这批小数据的第一阶段。不要在同一次训练中途改 batch size；如果后续想比较 batch 256，需要另开独立 run 并从 `pi05_base` 重新训练。
@@ -107,11 +107,11 @@ effective_epochs = num_train_steps * global_batch_size / 4643
 
 | global batch | train steps | max steps | warmup steps | save interval | effective epochs |
 |---:|---:|---:|---:|---:|---:|
-| 128 | 20000 | 40000 | 10000 | 5000 | 551 |
-| 128 | 40000 | 60000 | 10000 | 5000 | 1103 |
-| 128 | 60000 | 60000 | 10000 | 5000 | 1654 |
-| 256 | 10000 | 20000 | 10000 | 5000 | 551 |
-| 64 | 40000 | 80000 | 10000 | 5000 | 551 |
+| 128 | 20000 | 40000 | 10000 | 2000 | 551 |
+| 128 | 40000 | 60000 | 10000 | 2000 | 1103 |
+| 128 | 60000 | 60000 | 10000 | 2000 | 1654 |
+| 256 | 10000 | 20000 | 10000 | 2000 | 551 |
+| 64 | 40000 | 80000 | 10000 | 2000 | 551 |
 
 主实验先用 global `128` 跑到 `20000` steps 并做 validation。若 validation 在 `20000` 仍明显上涨，再继续到 `40000`；如果 `40000` 仍明显上涨，才继续到 `60000`。
 
@@ -157,7 +157,7 @@ bash scripts/install_openpi_on_hpc.sh
 batch_size=128
 num_train_steps=20000
 warmup_steps=10000
-save_interval=5000
+save_interval=2000
 fsdp_devices=8
 ```
 
@@ -277,13 +277,13 @@ EXP_NAME=selected10_pi05_waypoint_h1 \
 bash scripts/train_pi05_waypoint_h1.sh \
   --batch-size 128 \
   --num-train-steps 20000 \
-  --save-interval 5000 \
-  --keep-period 5000 \
+  --save-interval 2000 \
+  --keep-period 2000 \
   --lr-schedule.warmup-steps 10000 \
   --fsdp-devices 8
 ```
 
-如果 `5000/10000/15000/20000` 的 validation 仍在明显上涨，resume 同一个 run 到 40000 steps：
+如果第一阶段 validation 在 `20000` 仍明显上涨，resume 同一个 run 到 40000 steps：
 
 ```bash
 PI05_ROOT=/path/to/pi05_baseline \
@@ -292,8 +292,8 @@ bash scripts/train_pi05_waypoint_h1.sh \
   --resume \
   --batch-size 128 \
   --num-train-steps 40000 \
-  --save-interval 5000 \
-  --keep-period 5000 \
+  --save-interval 2000 \
+  --keep-period 2000 \
   --lr-schedule.warmup-steps 10000 \
   --fsdp-devices 8
 ```
@@ -307,8 +307,8 @@ bash scripts/train_pi05_waypoint_h1.sh \
   --resume \
   --batch-size 128 \
   --num-train-steps 60000 \
-  --save-interval 5000 \
-  --keep-period 5000 \
+  --save-interval 2000 \
+  --keep-period 2000 \
   --lr-schedule.warmup-steps 10000 \
   --fsdp-devices 8
 ```
@@ -331,13 +331,19 @@ bash scripts/train_pi05_waypoint_h1.sh \
 第一阶段候选 checkpoint 建议完整跑 validation：
 
 ```text
-5000
+2000
+4000
+6000
+8000
 10000
-15000
+12000
+14000
+16000
+18000
 20000
 ```
 
-如果 `20000` step 的 validation success 仍然最好，再继续到 `25000/30000/35000/40000`。如果 `40000` 仍然最好，再继续到 `45000/50000/55000/60000`。
+保存间隔是 2000 steps，所以也可以按更细粒度补评估相邻 checkpoint。建议先粗评估 `4000/8000/12000/16000/20000`，如果峰值位置不清楚，再评估周围的 2000-step checkpoint。如果 `20000` step 的 validation success 仍然最好，再继续到 `22000/24000/.../40000`。如果 `40000` 仍然最好，再继续到 `42000/44000/.../60000`。
 
 当前 OpenPI config 使用：
 
@@ -345,7 +351,7 @@ bash scripts/train_pi05_waypoint_h1.sh \
 - `pi0_config.Pi0Config(pi05=True, action_horizon=1, discrete_state_input=False)`
 - model action dim 保持 pi0.5 默认 32，RLBench action 由 transform pad/trim 到前 7 维
 - pretrained init: `gs://openpi-assets/checkpoints/pi05_base/params`
-- selected10 first-stage default: global `batch_size=128`, `num_train_steps=20000`, `save_interval=5000`, `fsdp_devices=8`
+- selected10 first-stage default: global `batch_size=128`, `num_train_steps=20000`, `save_interval=2000`, `fsdp_devices=8`
 
 ## Online Eval
 

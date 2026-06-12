@@ -10,7 +10,7 @@
 - pi0.5 / OpenPI flow-matching action expert
 - 稀疏动作目标：预测下一个 full-task heuristic waypoint
 
-动作格式是 `absolute_rpy7`：`x, y, z, roll, pitch, yaw, gripper_open`。训练时 `action_horizon=1`，online eval 时每次预测一个 waypoint，并交给 RLBench planner/IK action mode 执行。
+动作格式是 `absolute_rotvec7`：`x, y, z, rx, ry, rz, gripper_open`。proprio/state 默认也是同样的 end-effector position + rotation-vector + gripper 表示。训练时 `action_horizon=1`，online eval 时每次预测一个 waypoint，把 rotvec 转成 quaternion 后交给 RLBench planner/IK action mode 执行。
 
 ## 数据格式
 
@@ -358,7 +358,7 @@ bash scripts/train_pi05_waypoint_h1.sh \
 本 repo 当前重点是 HPC training/data conversion scaffold。online eval wrapper 后续应接到现有 RLBench eval 逻辑：
 
 ```text
-live obs + full task instruction -> pi0.5 server -> absolute_rpy7 waypoint -> RLBench planner
+live obs + full task instruction -> pi0.5 server -> absolute_rotvec7 waypoint -> rotvec-to-quaternion -> RLBench planner
 ```
 
 这里不使用 event boundary，也不使用 Wan/video tokens。eval episode 选择应和 DP baseline manifest 的 val/test split 对齐。

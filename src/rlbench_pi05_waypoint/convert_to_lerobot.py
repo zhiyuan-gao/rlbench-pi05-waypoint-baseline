@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from .common import (
     VIEW_NAMES,
-    absolute_rpy7_from_obs,
+    absolute_rotvec7_from_obs,
     clean_waypoints,
     filter_manifest_rows,
     image_path_for_frame,
@@ -55,7 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--lowdim-root-200", default=None)
     parser.add_argument("--lowdim-root-400", default=None)
     parser.add_argument("--lowdim-root", action="append", default=[])
-    parser.add_argument("--state-mode", choices=("ee_rotvec", "ee_rpy"), default="ee_rotvec")
+    parser.add_argument("--state-mode", choices=("ee_rotvec",), default="ee_rotvec")
     parser.add_argument("--image-size", type=int, default=256)
     parser.add_argument("--sample-every-n", type=int, default=0)
     parser.add_argument("--max-episodes", type=int, default=None)
@@ -178,7 +178,7 @@ def main(argv=None):
                             image_path_for_frame(rgb_episode_dir, "right_shoulder", current), args.image_size
                         ),
                         "state": obs_to_state(obs, mode=args.state_mode).astype(np.float32),
-                        "actions": absolute_rpy7_from_obs(target_obs).astype(np.float32),
+                        "actions": absolute_rotvec7_from_obs(target_obs).astype(np.float32),
                         "task": task_text,
                     }
                 )
@@ -207,7 +207,7 @@ def main(argv=None):
         "split_filter": args.split,
         "tasks_filter": args.task,
         "state_mode": args.state_mode,
-        "action_format": "absolute_rpy7",
+        "action_format": "absolute_rotvec7",
         "action_horizon": 1,
         "sample_every_n": int(args.sample_every_n),
         "num_manifest_episodes": len(rows),

@@ -1,5 +1,4 @@
 import json
-import math
 import pickle
 from collections import defaultdict
 from pathlib import Path
@@ -130,34 +129,6 @@ def normalize_quat(q):
     return q / np.clip(np.linalg.norm(q, axis=-1, keepdims=True), 1e-12, None)
 
 
-def quat_to_rpy(q):
-    q = normalize_quat(q)
-    x, y, z, w = np.moveaxis(q, -1, 0)
-    roll = np.arctan2(2.0 * (w * x + y * z), 1.0 - 2.0 * (x * x + y * y))
-    pitch_arg = np.clip(2.0 * (w * y - z * x), -1.0, 1.0)
-    pitch = np.arcsin(pitch_arg)
-    yaw = np.arctan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
-    return np.stack([roll, pitch, yaw], axis=-1)
-
-
-def rpy_to_quat(rpy):
-    roll, pitch, yaw = np.asarray(rpy, dtype=np.float64)
-    cr, sr = math.cos(roll * 0.5), math.sin(roll * 0.5)
-    cp, sp = math.cos(pitch * 0.5), math.sin(pitch * 0.5)
-    cy, sy = math.cos(yaw * 0.5), math.sin(yaw * 0.5)
-    return normalize_quat(
-        np.asarray(
-            [
-                sr * cp * cy - cr * sp * sy,
-                cr * sp * cy + sr * cp * sy,
-                cr * cp * sy - sr * sp * cy,
-                cr * cp * cy + sr * sp * sy,
-            ],
-            dtype=np.float64,
-        )
-    )
-
-
 def quat_to_rotvec(q):
     q = normalize_quat(q)
     q = np.where(q[..., 3:4] < 0.0, -q, q)
@@ -168,6 +139,17 @@ def quat_to_rotvec(q):
     scale = np.full_like(angle, 2.0)
     np.divide(angle, sin_half, out=scale, where=sin_half > 1e-8)
     return xyz * scale[..., None]
+
+
+def rotvec_to_quat(rotvec):
+    rotvec = np.asarray(rotvec, dtype=np.float64)
+    angle = np.linalg.norm(rotvec, axis=-1, keepdims=True)
+    half = 0.5 * angle
+    scale = np.full_like(angle, 0.5)
+    np.divide(np.sin(half), angle, out=scale, where=angle > 1e-8)
+    xyz = rotvec * scale
+    w = np.cos(half)
+    return normalize_quat(np.concatenate([xyz, w], axis=-1))
 
 
 def gripper_open_value(obs, threshold: float = 0.95) -> float:
@@ -187,15 +169,13 @@ def obs_to_state(obs, mode: str = "ee_rotvec") -> np.ndarray:
     gripper = np.asarray([gripper_open_value(obs)], dtype=np.float32)
     if mode == "ee_rotvec":
         return np.concatenate([ee_pose[:3], quat_to_rotvec(ee_pose[3:7]).astype(np.float32), gripper])
-    if mode == "ee_rpy":
-        return np.concatenate([ee_pose[:3], quat_to_rpy(ee_pose[3:7]).astype(np.float32), gripper])
     raise ValueError(f"Unsupported state mode: {mode}")
 
 
-def absolute_rpy7_from_obs(obs) -> np.ndarray:
+def absolute_rotvec7_from_obs(obs) -> np.ndarray:
     ee_pose = np.asarray(obs.gripper_pose, dtype=np.float32)
-    rpy = quat_to_rpy(ee_pose[3:7]).astype(np.float32)
-    return np.concatenate([ee_pose[:3], rpy, [gripper_open_value(obs)]]).astype(np.float32)
+    rotvec = quat_to_rotvec(ee_pose[3:7]).astype(np.float32)
+    return np.concatenate([ee_pose[:3], rotvec, [gripper_open_value(obs)]]).astype(np.float32)
 
 
 def clean_waypoints(row: dict, num_frames: Optional[int] = None) -> List[int]:
@@ -218,4 +198,3 @@ def clean_waypoints(row: dict, num_frames: Optional[int] = None) -> List[int]:
 
 def image_path_for_frame(episode_dir: Path, view: str, frame_idx: int) -> Path:
     return Path(episode_dir) / f"{view}_rgb" / f"{int(frame_idx)}.png"
-
